@@ -137,6 +137,22 @@ def fun_center_point_run(list_run_df):
 
     return vec_latitude_longitude
 
+def fun_clean_trace_start_end(gpsTrace_df, gpsPointLongitude, gpsPointLatitude):
+    """
+    Clean the DataFrame by keeping only the gps points corresponding to the run time.
+
+    Another funciton should come after to clean the list of run distances.
+    """
+    
+    diff_lat = gpsPointLatitude  - gpsTrace_df["latitude"][:]
+    diff_lon = gpsPointLongitude - gpsTrace_df["longitude"][:]
+    diff_all = (np.sqrt(diff_lon**2 + diff_lat**2))
+    indexMinDiff = np.argmin(diff_all)
+
+    indexCleaned = indexMinDiff#np.arange(indexMinDiff, diff_all.shape[0])
+
+    return indexCleaned
+
 
 
 
