@@ -58,4 +58,20 @@ I'm working here with static data, even so I can add new data each week, it is n
 
 I need to improve my dataviz, to experiment more with gps Python mddules, no need to re-invent the wheel.
 
+# Mini blog
+
+## 13th of August 2024
+
+I have added more data to my database.
+
+I have addes a new notebook for only doing viusalisation.
+
+## 12th of August 2024
+
+I have created a database that allows me to query information smoothly: longest run, shortest run, average distance
+
+I'm missing some of the gps traces to be able to compare by years.
+
+I need to work on the visualisation of the information.
+
 
