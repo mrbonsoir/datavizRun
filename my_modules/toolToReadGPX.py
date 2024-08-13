@@ -5,11 +5,13 @@ import gpxpy
 import pandas as pd
 import geopy.distance
 import matplotlib.pyplot as plt
+import os 
 
 def fun_gpx2pd(gpx_path):
     """
     The function load a gpx data file and return a pandas dataFrame with info extracted from the gpx file
     """
+    #print(gpx_path)
     with open(gpx_path) as f:
         gpx = gpxpy.parse(f)
     
@@ -18,7 +20,7 @@ def fun_gpx2pd(gpx_path):
     for segment in gpx.tracks[0].segments:
         for p in segment.points:
             points.append({
-                'time': p.time,
+                #'time': p.time,
                 'latitude': p.latitude,
                 'longitude': p.longitude,
                 'elevation': p.elevation,
@@ -32,8 +34,8 @@ def fun_gpx2pd(gpx_path):
     
     
     # Timing.
-    df['duration'] = df.time.diff().dt.total_seconds().fillna(0)
-    df['cumulative_duration'] = df.duration.cumsum()
+    #df['duration'] = df.time.diff().dt.total_seconds().fillna(0)
+    #df['cumulative_duration'] = df.duration.cumsum()
     #df['pace_metric'] = pd.Series((df.duration / 60) / (df.distance / 1000)).bfill()
     
     return df
@@ -137,11 +139,13 @@ def fun_center_point_run(list_run_df):
 
     return vec_latitude_longitude
 
-def fun_clean_trace_start_end(gpsTrace_df, gpsPointLongitude, gpsPointLatitude):
+def fun_clean_trace_start_end(gpsTrace_df, gpsPointLongitude, gpsPointLatitude, index_min_ref=30, debug = False):
     """
     Clean the DataFrame by keeping only the gps points corresponding to the run time.
 
-    Another funciton should come after to clean the list of run distances.
+    Input:
+        - index_min_ref is the value from which we need to clean the pass
+    It returns a DataFrame
     """
     
     diff_lat = gpsPointLatitude  - gpsTrace_df["latitude"][:]
@@ -149,10 +153,88 @@ def fun_clean_trace_start_end(gpsTrace_df, gpsPointLongitude, gpsPointLatitude):
     diff_all = (np.sqrt(diff_lon**2 + diff_lat**2))
     indexMinDiff = np.argmin(diff_all)
 
-    indexCleaned = indexMinDiff#np.arange(indexMinDiff, diff_all.shape[0])
+    if debug == True:
+        print(indexMinDiff,"-")
 
-    return indexCleaned
+    if (indexMinDiff > 0) & (indexMinDiff <= index_min_ref):
+        print(indexMinDiff,"between 5 and 30")
 
+        gpsTrace_df = gpsTrace_df.drop(np.arange(0, indexMinDiff))
+        gpsTrace_df = gpsTrace_df.reset_index()
+
+        gpsTrace_df["cumulative_distance"] = gpsTrace_df["cumulative_distance"] - gpsTrace_df["cumulative_distance"].loc[0]
+    
+        cleanedGpsTrace_df = gpsTrace_df.copy()
+    else:
+        cleanedGpsTrace_df = gpsTrace_df.copy()
+
+    return cleanedGpsTrace_df
+
+def fun_create_df_from_list_df(list_all_df, list_all_file_name, startRunDate_df, specialDate="2022-09-01"):
+    """The function takes as input: 
+    - a list of DataFrame as input 
+    - a list of csv files
+    - startRunDate_df a DataFrame of location and starting date of the runs, there are 4 different locations
+    - specialDate a single - for now - date for which it need to ne reset the location start
+
+    it returns: 
+    - a single DataFrame gathering information by element of the list of provided DataFrane"""
+
+    all_info_df = pd.DataFrame(columns = ["time","cumulative_distance","indexNum","numberDay","indexStartingPoint","numberRunnersPerRun"],
+                               index=[np.arange(len(list_all_df))])
+
+    for c, d in enumerate(list_all_df):
+        # clean the time value to keep only yy mm dd
+        head_tail = os.path.split(list_all_file_name[c])
+        time_run  = head_tail[1][8:18].replace("_","-")
+        all_info_df.iloc[c,0] = time_run
+        
+        # copy the values cumulative distance to the list of run, ie the last cumulative of each run
+        all_info_df.iloc[c,1] = list_all_df[c]["cumulative_distance"].iloc[-1]
+        
+        all_info_df.iloc[c,2] = c
+
+    # format properly the time column
+    all_info_df["time"] = pd.to_datetime(all_info_df['time'], format='%Y-%m-%d')
+    
+    #convert index to time index
+    all_info_df = all_info_df.set_index('time') 
+
+    all_info_df['numberDay'] = all_info_df.index.strftime('%j')
+
+    # add a new column as indexNum 0 to number of traces
+    all_info_df['indexStartingPoint'] = 0
+
+
+    select_df = all_info_df[(all_info_df.index >= startRunDate_df["startingDate"][0]) &
+                            (all_info_df.index < startRunDate_df["startingDate"][1])].copy()
+    index_sel = np.array(select_df["indexNum"].tolist())
+    for c in index_sel:
+        all_info_df.iloc[c,3] = 0
+
+    select_df = all_info_df[(all_info_df.index >= startRunDate_df["startingDate"][1]) &
+                            (all_info_df.index < startRunDate_df["startingDate"][2])].copy()
+    index_sel = np.array(select_df["indexNum"].tolist())
+    for c in index_sel:
+        all_info_df.iloc[c,3] = 1
+
+    select_df = all_info_df[(all_info_df.index >= startRunDate_df["startingDate"][2]) &
+                            (all_info_df.index <= startRunDate_df["startingDate"][3])].copy()
+    index_sel = np.array(select_df["indexNum"].tolist())
+    for c in index_sel:
+        all_info_df.iloc[c,3] = 2
+
+    select_df = all_info_df[(all_info_df.index >= startRunDate_df["startingDate"][3])].copy()
+    index_sel = np.array(select_df["indexNum"].tolist())
+    for c in index_sel:
+        all_info_df.iloc[c,3] = 3
+
+    # and special case for 2022 1 of September:
+    select_df = all_info_df[(all_info_df.index == pd.to_datetime(specialDate))].copy()
+    index_sel = np.array(select_df["indexNum"].tolist())
+    all_info_df.iloc[index_sel,3] = 3
+
+    return all_info_df
 
 
 
