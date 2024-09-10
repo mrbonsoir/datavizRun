@@ -7,6 +7,16 @@ import geopy.distance
 import matplotlib.pyplot as plt
 import os 
 
+# Some data
+list_starting_date =["2017-09-14","2018-09-14","2019-09-14","2020-09-14","2021-09-14","2022-09-14","2023-09-14","2024-09-14"]
+
+startingPoint_df = pd.DataFrame(columns=["name","startingDate","latitude","longitude"], 
+                                index=np.arange(5))
+startingPoint_df.iloc[:,0] = ["Origin","Park Girouard","Park Doyon","Espace Ciele","Summit Circle"]
+startingPoint_df.iloc[:,1] = ["2017-09-14", "2020-06-18","2022-11-21", "2022-11-24", "2022-11-24"]
+startingPoint_df.iloc[:,2] = [45.46604,  45.471895, 45.4776919, 45.489528, 45.491468847148674]
+startingPoint_df.iloc[:,3] = [-73.6194,  -73.613628, -73.62141,  -73.567539, -73.60451710657861]
+
 def fun_gpx2pd(gpx_path):
     """
     The function load a gpx data file and return a pandas dataFrame with info extracted from the gpx file
@@ -47,6 +57,7 @@ def fun_listPath_gpx2pd(list_data_path):
 
 	list_gpxpath_df = []
 	single_gpxpath_df = []
+
 	for c, d in enumerate(list_data_path):
 	    #print(d,c)
 		single_gpxpath_df = fun_gpx2pd(d)
@@ -79,7 +90,6 @@ def fun_display_list_data_path(list_path_df, run_year = 2018, figsize_window=(4,
 	plt.axis([ -73.650, -73.55, 45.45, 45.55])
 
 	#plt.show()
-
 
 def fun_DownSample_gpx(gpx_df, number_of_sample = 100):
     """
@@ -115,7 +125,6 @@ def fun_get_average_distance_run(list_run_df):
     average_run_distance = np.mean(vec_run_distance / 1000)
 
     return average_run_distance
-
 	
 def fun_center_point_run(list_run_df):
     """"
@@ -157,7 +166,8 @@ def fun_clean_trace_start_end(gpsTrace_df, gpsPointLongitude, gpsPointLatitude, 
         print(indexMinDiff,"-")
 
     if (indexMinDiff > 0) & (indexMinDiff <= index_min_ref):
-        print(indexMinDiff,"between 5 and 30")
+        if debug == True:
+            print(indexMinDiff,"between 5 and 30")
 
         gpsTrace_df = gpsTrace_df.drop(np.arange(0, indexMinDiff))
         gpsTrace_df = gpsTrace_df.reset_index()
@@ -175,7 +185,7 @@ def fun_create_df_from_list_df(list_all_df, list_all_file_name, startRunDate_df,
     - a list of DataFrame as input 
     - a list of csv files
     - startRunDate_df a DataFrame of location and starting date of the runs, there are 4 different locations
-    - specialDate a single - for now - date for which it need to ne reset the location start
+    - specialDate a single - for now - date for which it need to do re-set the location start
 
     it returns: 
     - a single DataFrame gathering information by element of the list of provided DataFrane"""
@@ -236,6 +246,97 @@ def fun_create_df_from_list_df(list_all_df, list_all_file_name, startRunDate_df,
 
     return all_info_df
 
+def fun_traces_before_race_from_lits_df(list_of_run_df, info_about_list_of_run_df, info_about_startingPoint_df, debug = False):
+    """
+    The function will remove the traces before the begining a run trace if it's too far from the actual start of the run.
+    """
+    for c, single_trace_df in enumerate(list_of_run_df):
+    #--> single_trace_df is equivalent to list_of_run_df[c]
+    
+        # check value 0, 1, 2, 3 of starting date:
+        ref_lon = info_about_startingPoint_df["longitude"][info_about_list_of_run_df.iloc[c,3]] 
+        ref_lat = info_about_startingPoint_df["latitude"][info_about_list_of_run_df.iloc[c,3]]
+        cleaned_run_df = fun_clean_trace_start_end(single_trace_df, ref_lon, ref_lat, debug = debug)
+    
+        # update the info all traces df
+        if len(cleaned_run_df) < len(single_trace_df):
+            if debug == True:
+                print(c, "len before/after ",len(single_trace_df),"/",len(cleaned_run_df), info_about_list_of_run_df["cumulative_distance"].iloc[c] / 1000, "--->", 
+                      cleaned_run_df["cumulative_distance"].iloc[-1]/1000)
+        
+            list_of_run_df[c] = cleaned_run_df.copy()
+            
+            # replace cumulative value
+            info_about_list_of_run_df.iloc[c,0] = cleaned_run_df["cumulative_distance"].iloc[-1]
 
+    return list_of_run_df, info_about_list_of_run_df
+
+def display_group_runs_by_dates(list_of_run_df, info_about_list_of_run_df, date_interval, title_="toto"):
+    """
+    The function displays a group of run in a date interval.
+    """
+    select_run_df = info_about_list_of_run_df[(info_about_list_of_run_df.index >= date_interval[0]) &
+                                              (info_about_list_of_run_df.index < date_interval[1])].copy()
+    index_sel = np.array(select_run_df["indexNum"].tolist())
+    
+    #plt.figure()
+    fig, (ax1) = plt.subplots(1, 1,figsize=(8,8))
+    plt.rcParams['figure.figsize'] = [4, 4]
+
+    # plot the traces
+    for c, i in enumerate(index_sel):
+        single_gps_trace_df = list_of_run_df[index_sel[c]]
+        ax1.plot(single_gps_trace_df["longitude"],single_gps_trace_df["latitude"],'k')
+
+    # display the longest of the season
+    #index_longest_run = select_df["cumulative_distance"].argmax()
+    #one_long_run_df   = select_df[index_longest_run]
+    #ax1.plot(one_long_run_df["longitude"],one_long_run_df["latitude"],c='k',markersize=30)
+    
+
+    start_Lon = startingPoint_df.iloc[:,3].to_numpy()
+    start_Lat = startingPoint_df.iloc[:,2].to_numpy()
+
+    # draw departure points
+    plt.scatter(start_Lon, start_Lat,c='r', alpha=0.75, s=200)
+    plt.plot(start_Lon[0:4], start_Lat[0:4],'-',c='r')
+
+    # draw line departure to summit circle
+    plt.scatter(start_Lon[-1], start_Lat[-1], c='g', alpha=0.95, s=400)
+    #for ii in np.arange(4):
+    #    plt.plot(start_Lon[[ii,-1]], start_Lat[[ii,-1]],'-',c='b')
+    
+    #print(start_Lon[[0,-1]], start_Lat[[0,-1]])
+
+    ax1.set_xlim(-73.66, -73.55)    
+    ax1.set_ylim(45.45, 45.525)    
+
+    #plt.title(title_+" - "+date_interval[0]+" to "+date_interval[1]+"")
+    plt.xlabel("longitude")
+    plt.ylabel("latitude")  
+    ax1.set_axis_off()
+
+def display_RefeferencePoint():
+    """
+    Function to display only the reference points.
+    """
+    fig, (ax1) = plt.subplots(1, 1,figsize=(8,8))
+    plt.rcParams['figure.figsize'] = [4, 4]
+    
+    # draw departure points
+    start_Lon = startingPoint_df.iloc[:,3].to_numpy()
+    start_Lat = startingPoint_df.iloc[:,2].to_numpy()
+    plt.scatter(start_Lon, start_Lat,c='r', alpha=0.75, s=200)
+    plt.plot(start_Lon[0:4], start_Lat[0:4],'-',c='r')
+
+    # draw line departure to summit circle
+    plt.scatter(start_Lon[-1], start_Lat[-1], c='g', alpha=0.95, s=400)
+
+    ax1.set_xlim(-73.66, -73.55)    
+    ax1.set_ylim(45.45, 45.525)    
+
+    plt.xlabel("longitude")
+    plt.ylabel("latitude")  
+    ax1.set_axis_off()
 
 
