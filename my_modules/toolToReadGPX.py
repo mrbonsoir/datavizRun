@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import os 
 
 # Some data
-list_starting_date =["2017-09-14","2018-09-14","2019-09-14","2020-09-14","2021-09-14","2022-09-14","2023-09-14","2024-09-14"]
+list_starting_date =["2017-09-14","2018-09-14","2019-09-14","2020-09-14","2021-09-14","2022-09-14","2023-09-14","2024-09-14","2025-09-14"]
 
 startingPoint_df = pd.DataFrame(columns=["name","startingDate","latitude","longitude"], 
                                 index=np.arange(5))
@@ -153,21 +153,24 @@ def fun_clean_trace_start_end(gpsTrace_df, gpsPointLongitude, gpsPointLatitude, 
     Clean the DataFrame by keeping only the gps points corresponding to the run time.
 
     Input:
-        - index_min_ref is the value from which we need to clean the pass
+        - index_min_ref is the value from which we need to clean the pass in percentage versus the number of data point.
     It returns a DataFrame
     """
     
+    index_min_ref = np.round(len(gpsTrace_df) * (index_min_ref / 100))
+    lower_min_ref = np.round(len(gpsTrace_df) * (3 / 100)) # start 3per after the first index
+
     diff_lat = gpsPointLatitude  - gpsTrace_df["latitude"][:]
     diff_lon = gpsPointLongitude - gpsTrace_df["longitude"][:]
     diff_all = (np.sqrt(diff_lon**2 + diff_lat**2))
     indexMinDiff = np.argmin(diff_all)
 
     if debug == True:
-        print(indexMinDiff,"-")
+        print(index_min_ref,indexMinDiff,"-")
 
-    if (indexMinDiff > 0) & (indexMinDiff <= index_min_ref):
+    if (lower_min_ref > 0) & (indexMinDiff <= index_min_ref):
         if debug == True:
-            print(indexMinDiff,"between 5 and 30")
+            print(indexMinDiff,"in {0, 0.3}per")
 
         gpsTrace_df = gpsTrace_df.drop(np.arange(0, indexMinDiff))
         gpsTrace_df = gpsTrace_df.reset_index()
@@ -180,7 +183,7 @@ def fun_clean_trace_start_end(gpsTrace_df, gpsPointLongitude, gpsPointLatitude, 
 
     return cleanedGpsTrace_df
 
-def fun_create_df_from_list_df(list_all_df, list_all_file_name, startRunDate_df, specialDate="2022-09-01"):
+def fun_create_df_from_list_df(list_all_df, list_all_file_name, startRunDate_df, specialDate="2022-09-01", club_name = "RunRite"):
     """The function takes as input: 
     - a list of DataFrame as input 
     - a list of csv files
@@ -196,7 +199,9 @@ def fun_create_df_from_list_df(list_all_df, list_all_file_name, startRunDate_df,
     for c, d in enumerate(list_all_df):
         # clean the time value to keep only yy mm dd
         head_tail = os.path.split(list_all_file_name[c])
-        time_run  = head_tail[1][8:18].replace("_","-")
+    
+        time_run  = head_tail[1][len(club_name)+1:len(club_name)+11].replace("_","-")
+
         all_info_df.iloc[c,0] = time_run
         
         # copy the values cumulative distance to the list of run, ie the last cumulative of each run
@@ -261,7 +266,7 @@ def fun_traces_before_race_from_lits_df(list_of_run_df, info_about_list_of_run_d
         # update the info all traces df
         if len(cleaned_run_df) < len(single_trace_df):
             if debug == True:
-                print(c, "len before/after ",len(single_trace_df),"/",len(cleaned_run_df), info_about_list_of_run_df["cumulative_distance"].iloc[c] / 1000, "--->", 
+                print(c, "lenght before/after ",len(single_trace_df),"/",len(cleaned_run_df), info_about_list_of_run_df["cumulative_distance"].iloc[c] / 1000, "--->", 
                       cleaned_run_df["cumulative_distance"].iloc[-1]/1000)
         
             list_of_run_df[c] = cleaned_run_df.copy()
@@ -271,7 +276,8 @@ def fun_traces_before_race_from_lits_df(list_of_run_df, info_about_list_of_run_d
 
     return list_of_run_df, info_about_list_of_run_df
 
-def display_group_runs_by_dates(list_of_run_df, info_about_list_of_run_df, date_interval, title_="toto"):
+def display_group_runs_by_dates(list_of_run_df, info_about_list_of_run_df, date_interval, 
+                                name_of_the_running_club = "RunRite",title_="toto"):
     """
     The function displays a group of run in a date interval.
     """
@@ -288,21 +294,27 @@ def display_group_runs_by_dates(list_of_run_df, info_about_list_of_run_df, date_
         single_gps_trace_df = list_of_run_df[index_sel[c]]
         ax1.plot(single_gps_trace_df["longitude"],single_gps_trace_df["latitude"],'k')
 
-    # display the longest of the season
-    #index_longest_run = select_df["cumulative_distance"].argmax()
-    #one_long_run_df   = select_df[index_longest_run]
-    #ax1.plot(one_long_run_df["longitude"],one_long_run_df["latitude"],c='k',markersize=30)
-    
-
     start_Lon = startingPoint_df.iloc[:,3].to_numpy()
     start_Lat = startingPoint_df.iloc[:,2].to_numpy()
 
-    # draw departure points
-    plt.scatter(start_Lon, start_Lat,c='r', alpha=0.75, s=200)
-    plt.plot(start_Lon[0:4], start_Lat[0:4],'-',c='r')
+    if name_of_the_running_club == "RunRite":
+        # draw departure points
+        plt.scatter(start_Lon, start_Lat,c='r', alpha=0.75, s=200)
+        plt.plot(start_Lon[0:4], start_Lat[0:4],'-',c='r')
 
-    # draw line departure to summit circle
-    plt.scatter(start_Lon[-1], start_Lat[-1], c='g', alpha=0.95, s=400)
+        # draw line departure to summit circle
+        plt.scatter(start_Lon[-1], start_Lat[-1], c='g', alpha=0.95, s=400)
+    elif name_of_the_running_club == "NDGRC":
+        # draw departure points
+        plt.scatter(start_Lon[1], start_Lat[1],c='r', alpha=0.75, s=200)
+    
+        # draw line departure to summit circle
+        plt.scatter(start_Lon[-1], start_Lat[-1], c='g', alpha=0.95, s=400)
+    else:
+        # draw line departure to summit circle
+        plt.scatter(start_Lon[-1], start_Lat[-1], c='g', alpha=0.95, s=400)
+
+
     #for ii in np.arange(4):
     #    plt.plot(start_Lon[[ii,-1]], start_Lat[[ii,-1]],'-',c='b')
     
