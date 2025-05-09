@@ -1,0 +1,142 @@
+# map definition file
+# -------------------
+# general hint for this yaml config file:
+# - do not use tabs or unnecessary white spaces
+#
+# useful links:
+# - https://github.com/mapnik/mapnik/wiki/SymbologySupport
+# - http://mapnik.org/mapnik-reference
+#
+# basic symbolizers:
+# - LinePatternSymbolizer (https://github.com/mapnik/mapnik/wiki/LinePatternSymbolizer)
+# - LineSymbolizer (https://github.com/mapnik/mapnik/wiki/LineSymbolizer)
+# - MarkersSymbolizer (https://github.com/mapnik/mapnik/wiki/MarkersSymbolizer)
+# - PointSymbolizer (https://github.com/mapnik/mapnik/wiki/PointSymbolizer)
+# - PolygonPatternSymbolizer (https://github.com/mapnik/mapnik/wiki/PolygonPatternSymbolizer)
+# - PolygonSymbolizer (https://github.com/mapnik/mapnik/wiki/PolygonSymbolizer)
+# - TextSymbolizer (https://github.com/mapnik/mapnik/wiki/TextSymbolizer)
+#
+# advanced symbolizers:
+# - BuildingSymbolizer (https://github.com/mapnik/mapnik/wiki/BuildingSymbolizer)
+# - RasterSymbolizer (https://github.com/mapnik/mapnik/wiki/RasterSymbolizer)
+# - ShieldSymbolizer (https://github.com/mapnik/mapnik/wiki/ShieldSymbolizer)
+#
+# purpose: sample map
+# author : printmaps-osm.de
+# release: 2021-04-09
+#
+# frame:
+# printmaps passepartout 841.0 1189.0 30.0 30.0 30.0 30.0
+#
+# background for footer:
+# printmaps rectangle 0.0 0.0 841.0 230.0
+#
+# border around map area:
+# printmaps rectangle 30.0 230.0 781.0 929.0
+# 
+# crop marks:
+# printmaps cropmarks 841.0 1189.0 5.0
+
+# service configuration
+# ---------------------
+
+# URL of webservice
+ServiceURL: http://printmaps-osm.de:8282/api/beta2/maps/
+
+# proxy configuration (not to be done here)
+# - set the environment variable $HTTP_PROXY on your local system 
+# - e.g. export HTTP_PROXY=http://user:password@proxy.server:port
+
+# essential map attributes (required)
+# -----------------------------------
+
+# file format (currently only png)
+Fileformat: png
+
+# scale as in "1:10000" (e.g. 10000, 25000)
+Scale: 20000
+
+# width and height (millimeter, e.g. 609.6)
+PrintWidth: 841
+PrintHeight: 1189
+
+# center coordinates (decimal degrees, e.g. 51.9506)
+Latitude: 45.491349330828534
+Longitude: -73.60452144000553
+
+# style / design (osm-carto, osm-carto-mono, osm-carto-ele20, schwarzplan, schwarzplan+, raster10)
+# raster10 (no map data): useful for placing / styling the user map elements
+# request the service capabilities to get a list of all available map styles
+Style: schwarzplan+
+
+# map projection, EPSG code as number (without prefix "EPSG:")
+# e.g. 3857 (EPSG:3857 / WGS84 / Web Mercator) (used by Google/Bing/OpenStreetMap)
+# e.g. 32632 (EPSG:32632 / WGS 84 / UTM Zone 32N)
+# e.g. 27700 (EPSG:27700 / OSGB 1936 / British National Grid)
+Projection: 3857
+
+# advanced map attributes (optional)
+# ----------------------------------
+
+# layers to hide (see service capabilities for possible values)
+# e.g. hide admin borders: admin-low-zoom,admin-mid-zoom,admin-high-zoom,admin-text
+# e.g. hide nature reserve borders: nature-reserve-boundaries,nature-reserve-text
+# e.g. hide tourism borders (theme park, zoo): tourism-boundary
+# e.g. hide highway shields: roads-text-ref-low-zoom,roads-text-ref
+HideLayers: admin-low-zoom,admin-mid-zoom,admin-high-zoom,admin-text
+
+# user defined objects (optional, draw order remains)
+# ---------------------------------------------------
+#
+# data object defined by ...
+# style: object style
+# srs: spatial reference system (is always '+init=epsg:4326' for gpx and kml)
+# type: type of data source (ogr, shape, gdal, csv)
+# file: name of data objects file
+# layer: data layer to extract (only required for ogr)
+#
+# item object defined by ...
+# style: object style
+# well-known-text: object definition
+#
+# well-known-text:
+#   POINT, LINESTRING, POLYGON, MULTIPOINT, MULTILINESTRING, MULTIPOLYGON
+#   all values are in millimeter (reference X0 Y0: lower left map corner)
+#
+# font sets:
+#   fontset-0: Noto Fonts normal
+#   fontset-1: Noto Fonts italic
+#   fontset-2: Noto Fonts bold
+
+UserObjects:
+
+# tour (gpx data)
+- Style: <LineSymbolizer stroke='red' stroke-width='4' stroke-linecap='round' stroke-opacity='0.7' stroke-linejoin='bevel'/>
+  SRS: '+init=epsg:4326'
+  Type: ogr
+  File: season6.gpx
+  Layer: tracks
+
+# frame
+- Style: <PolygonSymbolizer fill='white' fill-opacity='1.0' /> 
+  WellKnownText: POLYGON((0.0 0.0, 0.0 1189.0, 841.0 1189.0, 841.0 0.0, 0.0 0.0), (30.0 30.0, 30.0 1159.0, 811.0 1159.0, 811.0 30.0, 30.0 30.0))
+
+# background for footer
+#- Style: <PolygonSymbolizer fill='white' fill-opacity='0.0' /> 
+#  WellKnownText: LINESTRING(0.0 0.0, 0.0 230.0, 841.0 230.0, 841.0 0.0, 0.0 0.0)
+
+# border (around map area)
+- Style: <LineSymbolizer stroke='dimgray' stroke-width='0.75' />
+  WellKnownText: LINESTRING(30.0 30.0, 30.0 1159.0, 811.0 1159.0, 811.0 30.0, 30.0 30.0)
+  #WellKnownText: LINESTRING(30.0 230.0, 30.0 1159.0, 811.0 1159.0, 811.0 230.0, 30.0 230.0)
+
+# copyright
+#- Style: <TextSymbolizer fontset-name='fontset-0' size='12' fill='dimgray' orientation='90' allow-overlap='true'>'© OpenStreetMap contributors'</TextSymbolizer>
+#  WellKnownText: POINT(15 694.5)
+
+
+# user files to upload
+# --------------------
+
+UserFiles:
+- season6.gpx
